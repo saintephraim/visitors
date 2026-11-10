@@ -93,6 +93,8 @@ footer div p{margin-top:3px}
 .lesson h3{font-family:var(--font-body);font-size:19px;color:#45483a}
 .lesson p{font-size:16px;margin:4px 0 0}
 .lesson .readings{color:#484b3e}
+.inline-link{color:var(--olive);text-decoration:underline;text-decoration-color:#c9bc8a;text-underline-offset:3px;overflow-wrap:anywhere}
+.inline-link:hover{text-decoration-color:var(--olive)}
 .res-group h3{font-family:Georgia,serif;font-size:10px;letter-spacing:2.3px;text-transform:uppercase;color:var(--olive);margin:14px 0 4px}
 .res-group:first-child h3{margin-top:4px}
 .res{padding-block:10px;border-top:1px solid var(--line)}
@@ -240,6 +242,33 @@ html.embedded .section-nav{border-top:0}
     box.appendChild(el('p', 'catechism-status', text));
   }
 
+  // Turns web addresses in sheet text into links.
+  // "Video: Title — https://…" shows as "Video: Title" with the title linked.
+  function linkOut(href, text) {
+    var a = el('a', 'inline-link', text);
+    a.href = href; a.target = '_blank'; a.rel = 'noopener';
+    return a;
+  }
+  function richText(tag, cls, text) {
+    var p = el(tag, cls);
+    var m = String(text).match(/^\s*(?:([A-Za-z ]{2,20}):\s*)?(.+?)\s+[—–-]\s+(https?:\/\/\S+)\s*$/);
+    if (m) {
+      if (m[1]) p.appendChild(document.createTextNode(m[1] + ': '));
+      p.appendChild(linkOut(m[3], m[2]));
+      return p;
+    }
+    String(text).split(/(https?:\/\/[^\s]+)/).forEach(function (part) {
+      if (/^https?:\/\//.test(part)) {
+        var clean = part.replace(/[.,;:!?)]+$/, '');
+        p.appendChild(linkOut(clean, clean));
+        if (clean.length < part.length) p.appendChild(document.createTextNode(part.slice(clean.length)));
+      } else if (part) {
+        p.appendChild(document.createTextNode(part));
+      }
+    });
+    return p;
+  }
+
   function renderEvent(ev, past) {
     var li = el('li', 'event' + (past ? ' past' : ''));
     if (ev.day) {
@@ -253,7 +282,7 @@ html.embedded .section-nav{border-top:0}
     body.appendChild(el('h3', '', ev.title || 'Catechism class'));
     var meta = [ev.weekday, ev.clock, ev.location].filter(Boolean).join(' · ');
     if (meta) body.appendChild(el('p', 'meta', meta));
-    if (ev.notes) body.appendChild(el('p', 'note', ev.notes));
+    if (ev.notes) body.appendChild(richText('p', 'note', ev.notes));
     li.appendChild(body);
     return li;
   }
@@ -295,7 +324,7 @@ html.embedded .section-nav{border-top:0}
       var b = el('div', 'block');
       b.appendChild(el('h3', '', l.topic));
       if (l.readings) b.appendChild(el('p', 'readings', 'Reading: ' + l.readings));
-      if (l.notes) b.appendChild(el('p', '', l.notes));
+      if (l.notes) b.appendChild(richText('p', '', l.notes));
       li.appendChild(b);
       ol.appendChild(li);
     });
